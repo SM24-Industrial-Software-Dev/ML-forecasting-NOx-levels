@@ -1,6 +1,8 @@
 from dash import Dash, dcc, html, Input, Output
 import plotly.express as px
-import datetime
+# from datetime import datetime, timedelta
+import holidays
+import dateutil
 
 import pandas as pd
 
@@ -11,6 +13,17 @@ nox_data.rename(columns={'ADM2_NAME': 'City', "ADM1_NAME": 'State',
 nox_data['Date'] = pd.to_datetime(nox_data['Date'])
 
 app = Dash(__name__)
+
+
+def get_custom_holidays(years):
+    custom_holidays = holidays.HolidayBase()
+    for year in years:
+        easter = dateutil.easter.easter(year)
+        custom_holidays.append({
+            easter: "Easter",
+        })
+    return custom_holidays
+
 
 app.layout = html.Div([
     dcc.Dropdown(id='city-dd',
@@ -41,6 +54,10 @@ app.layout = html.Div([
      Input('date-range', 'end_date')]
 )
 def update_county(selected_cities, start_date, end_date):
+    # Convert the dates to datetime objects
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)
+
     if selected_cities:
         filtered_data = nox_data[nox_data.City.isin(selected_cities)]
     else:
@@ -57,6 +74,23 @@ def update_county(selected_cities, start_date, end_date):
     # If I had the population data here,
     #    I could assign size='population'
 
+    # Add US holidays
+    years = range(start_date.year, end_date.year + 1)
+    us_holidays = holidays.US(years=years) + get_custom_holidays(years)
+    holidays_in_range = [(pd.Timestamp(date), name) for date, name in us_holidays.items() if
+                         start_date <= pd.Timestamp(date) <= end_date]
+    for holiday_date, holiday_name in holidays_in_range:
+        figure.add_vline(x=holiday_date, line=dict(color='red', dash='dash', width=1))
+        figure.add_annotation(
+            x=holiday_date,
+            y=1,
+            yref='paper',
+            showarrow=False,
+            text=holiday_name,
+            xanchor='left',
+            textangle=-90,
+            font=dict(color='red')
+        )
     return figure
 
 
