@@ -69,8 +69,10 @@ def update_county(selected_cities, start_date, end_date):
 
     figure = px.line(filtered_data, x='Date', y='mean',
                      hover_data=['State', 'City', 'Date', 'mean', 'DOW', 'DOY'],
-                     color='City', markers=True)
-    figure.update_layout({'paper_bgcolor': 'rgb(44,44,44)', 'font': {'color': 'white'}})
+                     color='City', markers=True, labels={'mean': 'NO2 concentration'},
+                     title='Tropospheric NO2 concentration over time')
+    figure.update_layout({'paper_bgcolor': 'rgb(44,44,44)', 'font': {'color': 'white'},
+                          'title': {'x': 0.45, 'xanchor': 'center'}})
     # If I had the population data here,
     #    I could assign size='population'
 
@@ -83,12 +85,9 @@ def update_county(selected_cities, start_date, end_date):
         figure.add_vline(x=holiday_date, line=dict(color='red', dash='dash', width=1))
         figure.add_annotation(
             x=holiday_date,
-            y=1,
-            yref='paper',
-            showarrow=False,
-            text=holiday_name,
-            xanchor='left',
-            textangle=-90,
+            y=1, yref='paper',
+            showarrow=False, text=holiday_name,
+            xanchor='left', textangle=-90,
             font=dict(color='red')
         )
     return figure
