@@ -10,7 +10,7 @@ nox_data.rename(columns={'ADM2_NAME': 'City', "ADM1_NAME": 'State',
                          'DATE': 'Date'},
                 inplace=True)
 nox_data['Date'] = pd.to_datetime(nox_data['Date'])
-# nox_data.groupby('DOW')
+# nox_data.groupby(['City','DOY'])
 
 
 Monthly_nox = nox_data.copy(deep=True)
@@ -60,7 +60,8 @@ app.layout = html.Div([
                         ),
     dcc.Tabs(id="tabs-for-graph", value='daily', children=[
         dcc.Tab(label='Daily Graph', value='daily', style=tab_style, selected_style=tab_selected_style),
-        dcc.Tab(label='Monthly Graph', value='monthly', style=tab_style, selected_style=tab_selected_style),
+        dcc.Tab(label='Monthly Averages', value='monthly', style=tab_style, selected_style=tab_selected_style),
+        dcc.Tab(label='Yearly Repetition', value='yearly', style=tab_style, selected_style=tab_selected_style)
     ]),
     dcc.Graph(id='time-series')
 ],
@@ -116,13 +117,21 @@ def update_county(selected_cities, start_date, end_date, selected_view):
                 xanchor='left', textangle=-90,
                 font=dict(color='red')
             )
-    else:
+    elif selected_view == 'monthly':
         # For the Monthly Plot
         filtered_data = filter_data(Monthly_nox, selected_cities, start_date, end_date)
         figure = px.line(filtered_data, x='Date', y='mean',
                          hover_data=['City', 'Date', 'mean'],
                          color='City', markers=True, labels={'mean': 'NO2 concentration'},
                          title='Monthly tropospheric NO2 concentration over time')
+    else:
+        nox_data['Year'] = pd.DatetimeIndex(nox_data['Date']).year
+        nox_data['City-Year'] = nox_data['City'] + ' ' + nox_data['Year'].astype(str)
+        filtered_data = filter_data(nox_data, selected_cities, start_date, end_date)
+        figure = px.line(filtered_data, x='DOY', y='mean',
+                         hover_data=['State', 'City', 'Date', 'mean', 'DOW', 'DOY', 'Year'],
+                         color='City-Year', markers=False, labels={'mean': 'NO2 concentration', 'DOY': 'Day of Year'},
+                         title='Daily tropospheric NO2 concentration over time')
     figure.update_layout({'paper_bgcolor': 'rgb(44,44,44)', 'font': {'color': 'white'},
                           'title': {'x': 0.45, 'xanchor': 'center'}})
     return figure
