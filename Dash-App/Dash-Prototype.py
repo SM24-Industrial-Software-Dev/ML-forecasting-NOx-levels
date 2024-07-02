@@ -137,6 +137,20 @@ def update_county(selected_cities, start_date, end_date, selected_view):
                          hover_data=['City', 'Date', 'mean'],
                          color='City', markers=True, labels={'mean': 'NO2 concentration'},
                          title='tropospheric_NO2_column_number_density (mol/m^2)')
+
+        # Generate a list of dates that start new years
+        year_start_dates = pd.date_range(start=start_date, end=end_date, freq='YS')
+
+        # Add vertical lines at each new year
+        for year_date in year_start_dates:
+            figure.add_vline(x=year_date, line=dict(color='red', dash='dash', width=1))
+            figure.add_annotation(
+                x=year_date,
+                y=1, yref='paper',
+                showarrow=False, text=str(year_date.year),
+                xanchor='left', textangle=-90,
+                font=dict(color='red')
+            )
     else:
         nox_data['Year'] = pd.DatetimeIndex(nox_data['Date']).year
         nox_data['City-Year'] = nox_data['City'] + ' ' + nox_data['Year'].astype(str)
