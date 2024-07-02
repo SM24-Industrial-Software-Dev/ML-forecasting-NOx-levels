@@ -30,7 +30,21 @@ tab_style = {
     'padding': '6px',
     'color': '#200031'
 }
-
+holiday_abbr = {
+    'Independence Day': 'IND',
+    'Independence Day (observed)': None,
+    'Columbus Day': 'COL',
+    'Veterans Day': 'VET',
+    'Veterans Day (observed)': None,
+    "New Year's Day": 'NYD',
+    'Martin Luther King Jr. Day': 'MLK',
+    "Washington's Birthday": 'PRS',
+    'Memorial Day': 'MEM',
+    'Labor Day': 'LAB',
+    'Thanksgiving': 'THK',
+    'Christmas Day': 'CHR',
+    'Easter': 'eas'
+}
 
 def get_custom_holidays(years):
     custom_holidays = holidays.HolidayBase()
@@ -112,7 +126,7 @@ def update_county(selected_cities, start_date, end_date, selected_view):
             figure.add_annotation(
                 x=holiday_date,
                 y=1, yref='paper',
-                showarrow=False, text=holiday_name,
+                showarrow=False, text=holiday_abbr[holiday_name],
                 xanchor='left', textangle=-90,
                 font=dict(color='red')
             )
