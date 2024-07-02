@@ -4,7 +4,7 @@ import holidays
 import dateutil
 
 import pandas as pd
-import plotly.graph_objs as go
+from plotly.subplots import make_subplots
 
 nox_data = pd.read_csv('./data/NO2_mean_df_2019_2021.csv')
 nox_data.rename(columns={'ADM2_NAME': 'City', "ADM1_NAME": 'State',
@@ -117,6 +117,7 @@ def update_county(selected_cities, start_date, end_date, selected_view, selected
         end_date = pd.to_datetime(end_date)
 
         if selected_view == 'daily':
+            # daily plot view
             filtered_data = filter_data(nox_data, selected_cities, start_date, end_date)
             figure = px.line(filtered_data, x='Date', y='mean',
                              hover_data=['State', 'City', 'Date', 'mean', 'DOW', 'DOY'],
@@ -161,6 +162,7 @@ def update_county(selected_cities, start_date, end_date, selected_view, selected
                     font=dict(color='red')
                 )
         else:
+            # Year over year view
             nox_data['Year'] = pd.DatetimeIndex(nox_data['Date']).year
             nox_data['City-Year'] = nox_data['City'] + ' ' + nox_data['Year'].astype(str)
             filtered_data = filter_data(nox_data, selected_cities, start_date, end_date)
@@ -169,6 +171,21 @@ def update_county(selected_cities, start_date, end_date, selected_view, selected
                              color='City-Year', markers=False,
                              labels={'mean': 'NO2 concentration', 'DOY': 'Day of Year'},
                              title='tropospheric_NO2_column_number_density (mol/m^2)')
+            selected_cities = selected_cities if selected_cities else nox_data['City'].unique()
+            figure = make_subplots(rows=len(selected_cities), cols=1, shared_xaxes=True,
+                                   subplot_titles=selected_cities)
+
+            for i, city in enumerate(selected_cities):
+                filtered_data = nox_data[nox_data['City'] == city]
+                city_fig = px.line(filtered_data, x='DOY', y='mean',
+                                   hover_data=['State', 'City', 'Date', 'mean', 'DOW', 'DOY', 'Year'],
+                                   color='City-Year', markers=False,
+                                   labels={'mean': 'NO2 concentration', 'DOY': 'Day of Year'})
+
+                for trace in city_fig['data']:
+                    figure.add_trace(trace, row=i + 1, col=1)
+            figure.update_layout(height=400 * len(selected_cities))
+
         figure.update_layout({'paper_bgcolor': 'rgb(44,44,44)', 'font': {'color': 'white'},
                               'title': {'x': 0.45, 'xanchor': 'center'}}, yaxis={'title': None})
     else:
