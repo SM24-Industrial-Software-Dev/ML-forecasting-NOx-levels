@@ -10,7 +10,6 @@ nox_data.rename(columns={'ADM2_NAME': 'City', "ADM1_NAME": 'State',
                          'DATE': 'Date'},
                 inplace=True)
 nox_data['Date'] = pd.to_datetime(nox_data['Date'])
-# nox_data.groupby(['City','DOY'])
 
 
 Monthly_nox = nox_data.copy(deep=True)
@@ -99,7 +98,7 @@ def update_county(selected_cities, start_date, end_date, selected_view):
         figure = px.line(filtered_data, x='Date', y='mean',
                          hover_data=['State', 'City', 'Date', 'mean', 'DOW', 'DOY'],
                          color='City', markers=False, labels={'mean': 'NO2 concentration'},
-                         title='Daily tropospheric NO2 concentration over time')
+                         title='tropospheric_NO2_column_number_density (mol/m^2)')
         # If I had the population data here,
         #    I could assign size='population'
 
@@ -123,7 +122,7 @@ def update_county(selected_cities, start_date, end_date, selected_view):
         figure = px.line(filtered_data, x='Date', y='mean',
                          hover_data=['City', 'Date', 'mean'],
                          color='City', markers=True, labels={'mean': 'NO2 concentration'},
-                         title='Monthly tropospheric NO2 concentration over time')
+                         title='tropospheric_NO2_column_number_density (mol/m^2)')
     else:
         nox_data['Year'] = pd.DatetimeIndex(nox_data['Date']).year
         nox_data['City-Year'] = nox_data['City'] + ' ' + nox_data['Year'].astype(str)
@@ -131,9 +130,9 @@ def update_county(selected_cities, start_date, end_date, selected_view):
         figure = px.line(filtered_data, x='DOY', y='mean',
                          hover_data=['State', 'City', 'Date', 'mean', 'DOW', 'DOY', 'Year'],
                          color='City-Year', markers=False, labels={'mean': 'NO2 concentration', 'DOY': 'Day of Year'},
-                         title='Daily tropospheric NO2 concentration over time')
+                         title='tropospheric_NO2_column_number_density (mol/m^2)')
     figure.update_layout({'paper_bgcolor': 'rgb(44,44,44)', 'font': {'color': 'white'},
-                          'title': {'x': 0.45, 'xanchor': 'center'}})
+                          'title': {'x': 0.45, 'xanchor': 'center'}},yaxis={'title': None})
     return figure
 
 
