@@ -122,7 +122,7 @@ def update_county(selected_cities, start_date, end_date, selected_view, selected
             figure = px.line(filtered_data, x='Date', y='mean',
                              hover_data=['State', 'City', 'Date', 'mean', 'DOW', 'DOY'],
                              color='City', markers=False, labels={'mean': 'NO2 concentration'},
-                             title='tropospheric_NO2_column_number_density (mol/m^2)')
+                             title='tropospheric_NO2_column_number_density (mol/m^2)', height=450)
             # If I had the population data here,
             #    I could assign size='population'
 
@@ -146,7 +146,7 @@ def update_county(selected_cities, start_date, end_date, selected_view, selected
             figure = px.line(filtered_data, x='Date', y='mean',
                              hover_data=['City', 'Date', 'mean'],
                              color='City', markers=True, labels={'mean': 'NO2 concentration'},
-                             title='tropospheric_NO2_column_number_density (mol/m^2)')
+                             title='tropospheric_NO2_column_number_density (mol/m^2)', height=450)
 
             # Generate a list of dates that start new years
             year_start_dates = pd.date_range(start=start_date, end=end_date, freq='YS')
