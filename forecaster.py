@@ -1,15 +1,9 @@
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 import jax.numpy as jnp
 import jax.random as jr
 import sts_jax.structural_time_series as sts
 import ee
-
-import import_ipynb
-from msa import MSA
-from Receive_Conc_API import get_nox_data
 
 class NOxForecaster():
 
@@ -27,19 +21,14 @@ class NOxForecaster():
     Raises:
         AssertionError: If the input DataFrame is missing required columns.
     """
-    required_columns = {'date', 'nox-concentration', 'isholiday'}
+    required_columns = {'date', 'nox-concentration'#, 'isholiday'
+    }
     assert required_columns.issubset(incomplete_df.columns), "Input DataFrame is missing required columns"
 
     self.df = _fill_df(incomplete_df)
     self.time_series = jnp.array(self.df['nox-concentration'].to_numpy(), dtype=np.float32)[:, None]
     self.dates = np.array(self.df['date'].to_numpy())
     # self.holidays = np.array(df['isholiday'].to_numpy())[:, None]
-
-
-    # holiday_effect = sts.LinearRegression(dim_covariates=1, add_bias=False,
-    #                                           name='holiday_effect')
-    # autoregress_effect = sts.Autoregressive(order=1,
-    #                                     name='autoregress_effect')
 
   def fit_dummy_seasonal_model(self, num_forecast_steps: int):
     """
