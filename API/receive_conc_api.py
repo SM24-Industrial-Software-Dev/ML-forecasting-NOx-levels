@@ -5,7 +5,18 @@ def get_Data(locations: ee.FeatureCollection,
              start_date: str,
              end_date: str,
              cloudmasking: float) -> pd.DataFrame:
+  """
+  Retrieves NOx concentration data for given locations and time period.
 
+  Args:
+      locations: Earth Engine FeatureCollection representing the locations.
+      start_date: Start date in YYYY-MM-DD format.
+      end_date: End date in YYYY-MM-DD format.
+      cloudmasking: Cloud masking fraction.
+
+  Returns:
+      A Pandas DataFrame containing NOx concentration data.
+  """
 
   adminSelect = locations
   no2Raw = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2')
@@ -48,7 +59,6 @@ def get_Data(locations: ee.FeatureCollection,
         .map(image_mediancomposite_by_date)
       )
 
-
   def createConc(img):
 
         def getConc(img):
@@ -64,7 +74,6 @@ def get_Data(locations: ee.FeatureCollection,
             dow=img.date().format('E')
             dt=img.date().format("YYYY-MM-dd")
 
-
             # Handle potential missing values
             feature_dict = {
                 'DOY': doy,
@@ -73,7 +82,7 @@ def get_Data(locations: ee.FeatureCollection,
             }
             if no2Mean:
                 feature_dict['conc'] = no2Mean
-                return adminSelect.map(lambda f: f.set(feature_dict)).first()
+                return ee.Feature(None, feature_dict)
             else:
                 return None
 
@@ -82,7 +91,6 @@ def get_Data(locations: ee.FeatureCollection,
   no2AggChange=no2.filterDate(startDate, endDate) \
                               .map(lambda img:createConc(img)) \
                               .filter(ee.Filter.notNull(['conc']))
-
 
   def fc_to_dict(fc):
     prop_names = fc.first().propertyNames()
