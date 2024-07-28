@@ -24,7 +24,20 @@ class NOxForecaster:
         }
         assert required_columns.issubset(incomplet_df.columns), "Input DataFrame is missing required columns"
 
-        self.df = _fill_df(incomplet_df)
+        def fill_df(incomplet_df: pd.DataFrame):
+        """
+        Fills in the missing nox-concentration data with a rolling median.
+        """
+        # Create a complete date range
+        dates = pd.date_range(incomplet_df['date'].min(), incomplet_df['date'].max())
+        df = pd.merge(pd.DataFrame({'date': dates}), incomplet_df, on='date', how='left')
+
+        # Fill missing values
+        while df['nox-concentration'].isna().any():
+            df['nox-concentration'] = df['nox-concentration'].fillna(df['nox-concentration'].rolling(7, center=True, min_periods=1).median())
+        return df
+
+        self.df = fill_df(incomplet_df)
         self.time_series = jnp.array(self.df['nox-concentration'].to_numpy(), dtype=np.float32)[:, None]
         self.dates = np.array(self.df['date'].to_numpy())
         # self.holidays = np.array(df['isholiday'].to_numpy())[:, None]
@@ -57,7 +70,7 @@ class NOxForecaster:
         model_components = [sts.LocalLinearTrend(), sts.SeasonalTrig(num_seasons=7)]
         return self._fit_model(model_components, num_forecast_steps)
 
-    def get_decomposition_data(model, param_samples, num_forecast_steps: int):
+    def get_decomposition_data(self, model, param_samples, num_forecast_steps: int):
         """
         Gets the structural decomposition data of the time series.
 
@@ -84,7 +97,7 @@ class NOxForecaster:
 
         return decomposition_data
 
-    def get_forecast(model, param_samples, num_forecast_steps: int):
+    def get_forecast(self, model, param_samples, num_forecast_steps: int):
         """
         Generates forecasts and forecast errors for a specified number of steps.
 
@@ -126,16 +139,3 @@ class NOxForecaster:
         key = jr.PRNGKey(42)
         opt_param, _losses = model.fit_mle(obs_time_series=self.time_series, key=key)
         return model, opt_param
-
-    def _fill_df(incomplet_df: pd.DataFrame):
-        """
-        Fills in the missing nox-concentration data with a rolling median.
-        """
-        # Create a complete date range
-        dates = pd.date_range(incomplet_df['date'].min(), incomplet_df['date'].max())
-        df = pd.merge(pd.DataFrame({'date': dates}), incomplet_df, on='date', how='left')
-
-        # Fill missing values
-        while df['nox-concentration'].isna().any():
-            df['nox-concentration'] = df['nox-concentration'].fillna(df['nox-concentration'].rolling(7, center=True, min_periods=1).median())
-        return df
