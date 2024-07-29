@@ -40,32 +40,44 @@ class NOxForecaster:
         self.df = fill_df(incomplet_df)
         self.time_series = jnp.array(self.df['nox-concentration'].to_numpy(), dtype=np.float32)[:, None]
         self.dates = np.array(self.df['date'].to_numpy())
-        # self.holidays = np.array(df['isholiday'].to_numpy())[:, None]
-        self.modelcomps = [sts.LocalLinearTrend(), 
-                          # sts.LinearRegression(dim_covariates=1, add_bias=False, name='holiday_effect'),
-                          # sts.Autoregressive(order=1, name='autoregress_effect')
-                        ]
+        # self.holidays = np.array(self.df['isholiday'].to_numpy())[:, None]
+        self.modelcomps = [
+            sts.LocalLinearTrend(),
+            sts.LinearRegression(
+                dim_covariates=1,
+                add_bias=False,
+                name="holiday_effect",
+            ),
+            sts.Autoregressive(order=1,name="autoregress_effect")
+        ]
 
-    def fit_dummy_seasonal_model(self):
+
+    def fit_dummy_seasonal_model(self, with_covariates: bool = False):
         """
         Fits a model with a dummy seasonal component.
 
         Returns:
             tuple: A tuple containing the fitted model and the optimized parameters.
         """
-        model_components = self.modelcomps[:]
-        model_components.insert(1, sts.SeasonalDummy(num_seasons=7))
+        if with_covariates:
+            model_components = self.modelcomps[:]
+            model_components.insert(1, sts.SeasonalDummy(num_seasons=7))
+            return self._fit_model_with_covariates(model_components)
+        model_components = [self.modelcomps[0], sts.SeasonalDummy(num_seasons=7)]
         return self._fit_model(model_components)
         
-    def fit_trig_seasonal_model(self):
+    def fit_trig_seasonal_model(self, with_covariates: bool = False):
         """
         Fits a model with a trigonometric seasonal component.
 
         Returns:
             tuple: A tuple containing the fitted model and the optimized parameters.
         """
-        model_components = self.modelcomps[:]
-        model_components.insert(1, sts.SeasonalTrig(num_seasons=7))
+        if with_covariates:
+            model_components = self.modelcomps[:]
+            model_components.insert(1, sts.SeasonalTrig(num_seasons=7))
+            return self._fit_model_with_covariates(model_components)
+        model_components = [self.modelcomps[0], sts.SeasonalTrig(num_seasons=7)]
         return self._fit_model(model_components)
 
     def get_decomposition_data(self, model, param_samples):
@@ -118,9 +130,9 @@ class NOxForecaster:
         forecast_means = forecast_means.mean(axis=0)
         forecast_scales = jnp.std(forecast_scales, axis=0)
 
-        return forecast_means, forecast_scales    
+        return forecast_means, forecast_scales
 
-    def _fit_model(self, model_components):
+    def _fit_model_with_covariates(self, model_components):
         """
         Internal method to fit a structural time series model.
 
@@ -128,8 +140,32 @@ class NOxForecaster:
             model_components (list): A list of model components (trend, seasonal, etc.).
 
         Returns:
-            model: The fitted model.
-            opt_param: The optimal parameters.
+            tuple: A tuple containing the fitted model and the optimized parameters.
+        """
+        model = sts.StructuralTimeSeries(
+            model_components=model_components,
+            obs_distribution="Gaussian",
+            obs_time_series=self.time_series,
+            covariates=self.holidays,
+        )
+        key = jr.PRNGKey(42)
+        opt_param, _losses = model.fit_mle(
+            obs_time_series=self.time_series,
+            covariates=self.holidays,
+            num_steps=2000,
+            key=key
+        )
+        return model, opt_param
+
+    def _fit_model(self, model_components):
+        """
+        Internal method to fit a structural time series model.
+
+        Args:
+            model_components (list): A list of model components (trend and seasonal).
+
+        Returns:
+            tuple: A tuple containing the fitted model and the optimized parameters.
         """
         model = sts.StructuralTimeSeries(model_components, obs_distribution='Gaussian', obs_time_series=self.time_series)
         key = jr.PRNGKey(42)
