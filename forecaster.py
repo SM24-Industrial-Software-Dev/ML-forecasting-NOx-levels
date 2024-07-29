@@ -25,59 +25,51 @@ class NOxForecaster:
         assert required_columns.issubset(incomplet_df.columns), "Input DataFrame is missing required columns"
 
         def fill_df(incomplet_df: pd.DataFrame):
-        """
-        Fills in the missing nox-concentration data with a rolling median.
-        """
-        # Create a complete date range
-        dates = pd.date_range(incomplet_df['date'].min(), incomplet_df['date'].max())
-        df = pd.merge(pd.DataFrame({'date': dates}), incomplet_df, on='date', how='left')
+            """
+            Fills in the missing nox-concentration data with a rolling median.
+            """
+            # Create a complete date range
+            dates = pd.date_range(incomplet_df['date'].min(), incomplet_df['date'].max())
+            df = pd.merge(pd.DataFrame({'date': dates}), incomplet_df, on='date', how='left')
 
-        # Fill missing values
-        while df['nox-concentration'].isna().any():
-            df['nox-concentration'] = df['nox-concentration'].fillna(df['nox-concentration'].rolling(7, center=True, min_periods=1).median())
-        return df
+            # Fill missing values
+            while df['nox-concentration'].isna().any():
+                df['nox-concentration'] = df['nox-concentration'].fillna(df['nox-concentration'].rolling(7, center=True, min_periods=1).median())
+            return df
 
         self.df = fill_df(incomplet_df)
         self.time_series = jnp.array(self.df['nox-concentration'].to_numpy(), dtype=np.float32)[:, None]
         self.dates = np.array(self.df['date'].to_numpy())
         # self.holidays = np.array(df['isholiday'].to_numpy())[:, None]
+        self.model_components = [sts.LocalLinearTrend()]
 
     def fit_dummy_seasonal_model(self):
         """
         Fits a model with a dummy seasonal component.
 
-        Args:
-            num_forecast_steps (int): Number of forecast steps.
-
         Returns:
             model: The fitted model.
             opt_param: The optimal parameters.
         """
-        model_components = [sts.LocalLinearTrend(), sts.SeasonalDummy(num_seasons=7)]
-        return self._fit_model(model_components, num_forecast_steps)
+        return self._fit_model(self.model_components.insert(1, sts.SeasonalDummy(num_seasons=7)))
 
     def fit_trig_seasonal_model(self):
         """
         Fits a model with a trigonometric seasonal component.
 
-        Args:
-            num_forecast_steps (int): Number of forecast steps.
-
         Returns:
             model: The fitted model.
             opt_param: The optimal parameters.
         """
-        model_components = [sts.LocalLinearTrend(), sts.SeasonalTrig(num_seasons=7)]
-        return self._fit_model(model_components, num_forecast_steps)
+        return self._fit_model(self.model_components.insert(1, sts.SeasonalTrig(num_seasons=7)))
 
-    def get_decomposition_data(self, model, param_samples, num_forecast_steps: int):
+    def get_decomposition_data(self, model, param_samples):
         """
         Gets the structural decomposition data of the time series.
 
         Args:
             model: The forecasting model.
-            param_samples: Optimal parameter values obtained from maximum likelihood.
-            num_forecast_steps (int): Number of forecast steps.
+            param_samples: The optimal parameters obtained from maximum likelihood.
 
         Returns:
             decomposition_data (dict): A dictionary containing the decomposition data for each component.
@@ -129,7 +121,6 @@ class NOxForecaster:
 
         Args:
             model_components (list): A list of model components (trend, seasonal, etc.).
-            num_forecast_steps (int): Number of forecast steps.
 
         Returns:
             model: The fitted model.
