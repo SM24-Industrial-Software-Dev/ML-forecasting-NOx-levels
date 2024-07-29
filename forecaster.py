@@ -20,14 +20,17 @@ class NOxForecaster:
         Raises:
             AssertionError: If the input DataFrame is missing required columns.
         """
-        required_columns = {'date', 'nox-concentration'#, 'isholiday'
-        }
+        required_columns = {'date', 'nox-concentration'}
         assert required_columns.issubset(incomplet_df.columns), "Input DataFrame is missing required columns"
 
         self.df = NOxForecaster.fill_df(incomplet_df)
         self.time_series = jnp.array(self.df['nox-concentration'].to_numpy(), dtype=np.float32)[:, None]
         self.dates = np.array(self.df['date'].to_numpy())
-        # self.holidays = np.array(self.df['isholiday'].to_numpy())[:, None]
+        if 'isholiday' in self.df.columns:
+            self.holidays = np.array(self.df['isholiday'].to_numpy())[:, None]
+        else:
+            # Handle the case where the column does not exist
+            self.holidays = None
         self.modelcomps = [
             sts.LocalLinearTrend(),
             sts.LinearRegression(
@@ -38,34 +41,31 @@ class NOxForecaster:
             sts.Autoregressive(order=1,name="autoregress_effect")
         ]
 
-
     def fit_dummy_seasonal_model(self, with_covariates: bool = False):
         """
         Fits a model with a dummy seasonal component.
 
         Returns:
-            tuple: A tuple containing the fitted model and the optimized parameters.
+            tuple: A tuple containing:
+                model: The fitted StructuralTimeSeries model.
+                opt_param: The optimized parameters for the model.
         """
-        if with_covariates:
-            model_components = self.modelcomps[:]
-            model_components.insert(1, sts.SeasonalDummy(num_seasons=7))
-            return self._fit_model_with_covariates(model_components)
-        model_components = [self.modelcomps[0], sts.SeasonalDummy(num_seasons=7)]
-        return self._fit_model(model_components)
+        if with_covariates and self.holidays:
+            return self._fit_model_with_covariates(sts.SeasonalDummy(num_seasons=7))
+        return self._fit_model(sts.SeasonalDummy(num_seasons=7))
         
     def fit_trig_seasonal_model(self, with_covariates: bool = False):
         """
         Fits a model with a trigonometric seasonal component.
 
         Returns:
-            tuple: A tuple containing the fitted model and the optimized parameters.
+            tuple: A tuple containing:
+                model: The fitted StructuralTimeSeries model.
+                opt_param: The optimized parameters for the model.
         """
-        if with_covariates:
-            model_components = self.modelcomps[:]
-            model_components.insert(1, sts.SeasonalTrig(num_seasons=7))
-            return self._fit_model_with_covariates(model_components)
-        model_components = [self.modelcomps[0], sts.SeasonalTrig(num_seasons=7)]
-        return self._fit_model(model_components)
+        if with_covariates and self.holidays:
+            return self._fit_model_with_covariates(sts.SeasonalTrig(num_seasons=7))
+        return self._fit_model(sts.SeasonalTrig(num_seasons=7))
 
     def get_decomposition_data(self, model, param_samples):
         """
@@ -138,16 +138,20 @@ class NOxForecaster:
 
         return forecast_means, forecast_scales
     
-    def _fit_model_with_covariates(self, model_components):
+    def _fit_model_with_covariates(self, seasonal_component):
         """
         Internal method to fit a structural time series model.
 
         Args:
-            model_components (list): A list of model components (trend, seasonal, etc.).
+            seasonal_component: The seasonal component to include in the model.
 
         Returns:
-            tuple: A tuple containing the fitted model and the optimized parameters.
+            tuple: A tuple containing:
+                model: The fitted StructuralTimeSeries model.
+                opt_param: The optimized parameters for the model.
         """
+        model_components = self.modelcomps[:]
+        model_components.insert(1, seasonal_component)
         model = sts.StructuralTimeSeries(
             model_components=model_components,
             obs_distribution="Gaussian",
@@ -164,16 +168,19 @@ class NOxForecaster:
         model.with_covariates = True
         return model, opt_param
 
-    def _fit_model(self, model_components):
+    def _fit_model(self, seasonal_component):
         """
         Internal method to fit a structural time series model.
 
         Args:
-            model_components (list): A list of model components (trend and seasonal).
+            seasonal_component: The seasonal component to include in the model.
 
         Returns:
-            tuple: A tuple containing the fitted model and the optimized parameters.
+            tuple: A tuple containing:
+                model: The fitted StructuralTimeSeries model.
+                opt_param: The optimized parameters for the model.
         """
+        model_components = [self.modelcomps[0], seasonal_component]
         model = sts.StructuralTimeSeries(model_components, obs_distribution='Gaussian', obs_time_series=self.time_series)
         key = jr.PRNGKey(42)
         opt_param, _losses = model.fit_mle(obs_time_series=self.time_series, key=key)
