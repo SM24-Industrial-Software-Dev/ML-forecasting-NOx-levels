@@ -51,22 +51,22 @@ class NOxForecaster:
         Fits a model with a dummy seasonal component.
 
         Returns:
-            model: The fitted model.
-            opt_param: The optimal parameters.
+            tuple: A tuple containing the fitted model and the optimized parameters.
         """
-        model_comps = self.modelcomps[:]
-        return self._fit_model(self.model_components.insert(1, sts.SeasonalDummy(num_seasons=7)))
-
+        model_components = self.modelcomps[:]
+        model_components.insert(1, sts.SeasonalDummy(num_seasons=7))
+        return self._fit_model(model_components)
+        
     def fit_trig_seasonal_model(self):
         """
         Fits a model with a trigonometric seasonal component.
 
         Returns:
-            model: The fitted model.
-            opt_param: The optimal parameters.
+            tuple: A tuple containing the fitted model and the optimized parameters.
         """
-        model_comps = self.modelcomps[:]
-        return self._fit_model(self.model_components.insert(1, sts.SeasonalTrig(num_seasons=7)))
+        model_components = self.modelcomps[:]
+        model_components.insert(1, sts.SeasonalTrig(num_seasons=7))
+        return self._fit_model(model_components)
 
     def get_decomposition_data(self, model, param_samples):
         """
