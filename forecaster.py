@@ -41,33 +41,45 @@ class NOxForecaster:
             sts.Autoregressive(order=1,name="autoregress_effect")
         ]
 
-    def fit_dummy_seasonal_model(self, with_covariates: bool = False):
+    def fit_dummy_seasonal_model(self, with_covariates: bool = True) -> tuple:
         """
-        Fits a model with a dummy seasonal component.
+        Fits a structural time series model with a dummy seasonal component.
+
+        Args:
+            with_covariates (bool, optional): Whether to include covariates in the model. Defaults to True.
 
         Returns:
             tuple: A tuple containing:
-                model: The fitted StructuralTimeSeries model.
+                model (sts.StructuralTimeSeries): The fitted StructuralTimeSeries model.
                 opt_param: The optimized parameters for the model.
+
+        Note:
+            If there is no holidays data, this method will always fit the model without covariates.
         """
         if with_covariates and self.holidays:
             return self._fit_model_with_covariates(sts.SeasonalDummy(num_seasons=7))
         return self._fit_model(sts.SeasonalDummy(num_seasons=7))
         
-    def fit_trig_seasonal_model(self, with_covariates: bool = False):
+    def fit_trig_seasonal_model(self, with_covariates: bool = True) -> tuple:
         """
-        Fits a model with a trigonometric seasonal component.
+        Fits a structural time series model with a trigonometric seasonal component.
+
+        Args:
+            with_covariates (bool, optional): Whether to include covariates in the model. Defaults to True.
 
         Returns:
             tuple: A tuple containing:
-                model: The fitted StructuralTimeSeries model.
+                model (sts.StructuralTimeSeries): The fitted StructuralTimeSeries model.
                 opt_param: The optimized parameters for the model.
+
+        Note:
+            If there is no holidays data, this method will always fit the model without covariates.
         """
         if with_covariates and self.holidays:
             return self._fit_model_with_covariates(sts.SeasonalTrig(num_seasons=7))
         return self._fit_model(sts.SeasonalTrig(num_seasons=7))
 
-    def get_decomposition_data(self, model, param_samples):
+    def get_decomposition_data(self, model, param_samples) -> dict:
         """
         Gets the structural decomposition data of the time series.
 
@@ -93,7 +105,7 @@ class NOxForecaster:
 
         return decomposition_data
 
-    def get_forecast(self, model, param_samples, num_forecast_steps: int = None, holidays: pd.Series = None) -> tuple:
+    def get_forecast(self, model, param_samples, num_forecast_steps: int | None = None, holidays: pd.Series | None = None) -> tuple:
         """
         Generates forecasts and forecast errors for a specified number of steps,
         optionally using covariates.
@@ -106,8 +118,8 @@ class NOxForecaster:
 
         Returns:
             tuple: A tuple containing:
-                forecast_means (array): Mean forecast values.
-                forecast_scales (array): Standard deviation of forecast values.
+                forecast_means (np.ndarray): Mean forecast values.
+                forecast_scales (np.ndarray): Standard deviation of forecast values.
         """
         if holidays is not None and model.with_covariates:
             num_forecast_steps = len(holidays)
@@ -138,7 +150,7 @@ class NOxForecaster:
 
         return forecast_means, forecast_scales
     
-    def _fit_model_with_covariates(self, seasonal_component):
+    def _fit_model_with_covariates(self, seasonal_component) -> tuple:
         """
         Internal method to fit a structural time series model.
 
@@ -147,7 +159,7 @@ class NOxForecaster:
 
         Returns:
             tuple: A tuple containing:
-                model: The fitted StructuralTimeSeries model.
+                model (sts.StructuralTimeSeries): The fitted StructuralTimeSeries model.
                 opt_param: The optimized parameters for the model.
         """
         model_components = self.modelcomps[:]
@@ -168,7 +180,7 @@ class NOxForecaster:
         model.with_covariates = True
         return model, opt_param
 
-    def _fit_model(self, seasonal_component):
+    def _fit_model(self, seasonal_component) -> tuple:
         """
         Internal method to fit a structural time series model.
 
@@ -177,7 +189,7 @@ class NOxForecaster:
 
         Returns:
             tuple: A tuple containing:
-                model: The fitted StructuralTimeSeries model.
+                model (sts.StructuralTimeSeries): The fitted StructuralTimeSeries model.
                 opt_param: The optimized parameters for the model.
         """
         model_components = [self.modelcomps[0], seasonal_component]
