@@ -24,20 +24,7 @@ class NOxForecaster:
         }
         assert required_columns.issubset(incomplet_df.columns), "Input DataFrame is missing required columns"
 
-        def fill_df(incomplet_df: pd.DataFrame):
-            """
-            Fills in the missing nox-concentration data with a rolling median.
-            """
-            # Create a complete date range
-            dates = pd.date_range(incomplet_df['date'].min(), incomplet_df['date'].max())
-            df = pd.merge(pd.DataFrame({'date': dates}), incomplet_df, on='date', how='left')
-
-            # Fill missing values
-            while df['nox-concentration'].isna().any():
-                df['nox-concentration'] = df['nox-concentration'].fillna(df['nox-concentration'].rolling(7, center=True, min_periods=1).median())
-            return df
-
-        self.df = fill_df(incomplet_df)
+        self.df = NOxForecaster.fill_df(incomplet_df)
         self.time_series = jnp.array(self.df['nox-concentration'].to_numpy(), dtype=np.float32)[:, None]
         self.dates = np.array(self.df['date'].to_numpy())
         # self.holidays = np.array(self.df['isholiday'].to_numpy())[:, None]
@@ -106,53 +93,50 @@ class NOxForecaster:
 
         return decomposition_data
 
-    def get_forecast(self, model, param_samples, num_forecast_steps: int):
+    def get_forecast(self, model, param_samples, num_forecast_steps: int = None, holidays: pd.Series = None) -> tuple:
         """
-        Generates forecasts and forecast errors for a specified number of steps.
+        Generates forecasts and forecast errors for a specified number of steps,
+        optionally using covariates.
 
         Args:
             model: The forecasting model.
             param_samples: Optimal parameter values obtained from maximum likelihood.
-            num_forecast_steps (int): Number of forecast steps.
-
-        Returns:
-            forecast_means (array): Mean forecast values.
-            forecast_scales (array): Standard deviation of forecast values.
-        """
-        # Generate forecast
-        forecast_means, forecast_scales = model.forecast(param_samples, self.time_series, num_forecast_steps)
-        return self._process_forecast(forecast_means, forecast_scales)
-
-    def get_forecast_with_covariates(self, model, param_samples, holidays: pd.Series) -> tuple:
-        """
-        Generates forecasts and forecast errors using covariates for an indirectly specified number of steps.
-
-        Args:
-            model: The forecasting model.
-            param_samples: Optimal parameter values obtained from maximum likelihood.
-            holidays (pd.Series): Holidays data for covariates.
+            num_forecast_steps (int, optional): Number of forecast steps. Defaults to None.
+            holidays (pd.Series, optional): Holidays data for covariates. Defaults to None.
 
         Returns:
             tuple: A tuple containing:
                 forecast_means (array): Mean forecast values.
                 forecast_scales (array): Standard deviation of forecast values.
         """
-        if not model.with_covariates:
+        if holidays is not None and model.with_covariates:
+            num_forecast_steps = len(holidays)
+            forecast_covariates = [holidays, None]
+            past_covariates = self.holidays
+        elif num_forecast_steps is not None:
+            forecast_covariates = None
+            past_covariates = None
+        else:
             return None
-        num_forecast_steps = len(holidays)
-        forecast_covariates = [holidays, None]
-
 
         # Generate forecast
         forecast_means, forecast_scales = model.forecast(
             param_samples,
             self.time_series,
             num_forecast_steps,
-            past_covariates=self.holidays,
+            past_covariates=past_covariates,
             forecast_covariates=forecast_covariates,
         )
 
-        return self._process_forecast(forecast_means, forecast_scales)
+        # Concatenate and squeeze forecast arrays
+        forecast_means = jnp.concatenate(forecast_means, axis=0).squeeze()
+        forecast_scales = jnp.concatenate(forecast_scales, axis=0).squeeze()
+
+        # Calculate mean forecast values and standard deviation of forecast scales
+        forecast_means = forecast_means.mean(axis=0)
+        forecast_scales = jnp.std(forecast_scales, axis=0)
+
+        return forecast_means, forecast_scales
     
     def _fit_model_with_covariates(self, model_components):
         """
@@ -196,12 +180,19 @@ class NOxForecaster:
         model.with_covariates = False
         return model, opt_param
 
-    def _process_forecast(self, forecast_means, forecast_scales):
-        # Concatenate and squeeze forecast arrays
-        forecast_means = jnp.concatenate(forecast_means, axis=0).squeeze()
-        forecast_scales = jnp.concatenate(forecast_scales, axis=0).squeeze()
+    @staticmethod
+    def fill_df(incomplete_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fills in the missing nox-concentration data with a rolling median.
+        """
+        # Create a complete date range
+        dates = pd.date_range(incomplete_df['date'].min(), incomplete_df['date'].max())
+        df = pd.merge(pd.DataFrame({'date': dates}), incomplete_df, on='date', how='left')
 
-        # Calculate mean forecast values and standard deviation of forecast scales
-        forecast_means = forecast_means.mean(axis=0)
-        forecast_scales = jnp.std(forecast_scales, axis=0)
-        return forecast_means, forecast_scales
+        # Fill missing values
+        while df['nox-concentration'].isna().any():
+            df['nox-concentration'] = df['nox-concentration'].fillna(
+                df['nox-concentration'].rolling(7, center=True, min_periods=1).median()
+            )
+
+        return df
