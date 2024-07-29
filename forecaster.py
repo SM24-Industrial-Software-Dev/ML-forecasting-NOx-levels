@@ -41,7 +41,10 @@ class NOxForecaster:
         self.time_series = jnp.array(self.df['nox-concentration'].to_numpy(), dtype=np.float32)[:, None]
         self.dates = np.array(self.df['date'].to_numpy())
         # self.holidays = np.array(df['isholiday'].to_numpy())[:, None]
-        self.model_components = [sts.LocalLinearTrend()]
+        self.modelcomps = [sts.LocalLinearTrend(), 
+                          # sts.LinearRegression(dim_covariates=1, add_bias=False, name='holiday_effect'),
+                          # sts.Autoregressive(order=1, name='autoregress_effect')
+                        ]
 
     def fit_dummy_seasonal_model(self):
         """
@@ -51,6 +54,7 @@ class NOxForecaster:
             model: The fitted model.
             opt_param: The optimal parameters.
         """
+        model_comps = self.modelcomps[:]
         return self._fit_model(self.model_components.insert(1, sts.SeasonalDummy(num_seasons=7)))
 
     def fit_trig_seasonal_model(self):
@@ -61,6 +65,7 @@ class NOxForecaster:
             model: The fitted model.
             opt_param: The optimal parameters.
         """
+        model_comps = self.modelcomps[:]
         return self._fit_model(self.model_components.insert(1, sts.SeasonalTrig(num_seasons=7)))
 
     def get_decomposition_data(self, model, param_samples):
