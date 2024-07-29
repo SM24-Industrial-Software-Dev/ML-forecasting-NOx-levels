@@ -119,19 +119,41 @@ class NOxForecaster:
             forecast_means (array): Mean forecast values.
             forecast_scales (array): Standard deviation of forecast values.
         """
-        # Generate forecasts
+        # Generate forecast
         forecast_means, forecast_scales = model.forecast(param_samples, self.time_series, num_forecast_steps)
+        return self._process_forecast(forecast_means, forecast_scales)
 
-        # Concatenate and squeeze forecast arrays
-        forecast_means = jnp.concatenate(forecast_means, axis=0).squeeze()
-        forecast_scales = jnp.concatenate(forecast_scales, axis=0).squeeze()
+    def get_forecast_with_covariates(self, model, param_samples, holidays: pd.Series) -> tuple:
+        """
+        Generates forecasts and forecast errors using covariates for an indirectly specified number of steps.
 
-        # Calculate mean forecast values and standard deviation of forecast scales
-        forecast_means = forecast_means.mean(axis=0)
-        forecast_scales = jnp.std(forecast_scales, axis=0)
+        Args:
+            model: The forecasting model.
+            param_samples: Optimal parameter values obtained from maximum likelihood.
+            holidays (pd.Series): Holidays data for covariates.
 
-        return forecast_means, forecast_scales
+        Returns:
+            tuple: A tuple containing:
+                forecast_means (array): Mean forecast values.
+                forecast_scales (array): Standard deviation of forecast values.
+        """
+        if not model.with_covariates:
+            return None
+        num_forecast_steps = len(holidays)
+        forecast_covariates = [holidays, None]
 
+
+        # Generate forecast
+        forecast_means, forecast_scales = model.forecast(
+            param_samples,
+            self.time_series,
+            num_forecast_steps,
+            past_covariates=self.holidays,
+            forecast_covariates=forecast_covariates,
+        )
+
+        return self._process_forecast(forecast_means, forecast_scales)
+    
     def _fit_model_with_covariates(self, model_components):
         """
         Internal method to fit a structural time series model.
@@ -155,6 +177,7 @@ class NOxForecaster:
             num_steps=2000,
             key=key
         )
+        model.with_covariates = True
         return model, opt_param
 
     def _fit_model(self, model_components):
@@ -170,4 +193,15 @@ class NOxForecaster:
         model = sts.StructuralTimeSeries(model_components, obs_distribution='Gaussian', obs_time_series=self.time_series)
         key = jr.PRNGKey(42)
         opt_param, _losses = model.fit_mle(obs_time_series=self.time_series, key=key)
+        model.with_covariates = False
         return model, opt_param
+
+    def _process_forecast(self, forecast_means, forecast_scales):
+        # Concatenate and squeeze forecast arrays
+        forecast_means = jnp.concatenate(forecast_means, axis=0).squeeze()
+        forecast_scales = jnp.concatenate(forecast_scales, axis=0).squeeze()
+
+        # Calculate mean forecast values and standard deviation of forecast scales
+        forecast_means = forecast_means.mean(axis=0)
+        forecast_scales = jnp.std(forecast_scales, axis=0)
+        return forecast_means, forecast_scales
