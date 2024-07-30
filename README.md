@@ -11,7 +11,7 @@ We aim to provide reliable forecasts of NOx concentrations, ultimately contribut
 
 This project implements a modeling and forecasting system for the spatially-localized levels of atmospheric NOx. To achieve this, we use the Sentinel 5P satellite data available in Google Earth Engine to obtain historical time series data of NOx concentrations over regions of interest.
 
-Using this data, we build state space forecasting models to extract trends, seasonal effects and other important effects using the historical time series data. Our models cover both monthly-averaged data to identify long-term trends as well as daily-average data to identify short-term trends and effects.
+Using this data, we employ state space forecasting models to extract trends, seasonal effects and other important covariates using the historical time series data. Our models cover both monthly-averaged data to identify long-term trends as well as daily-average data to identify short-term trends and effects.
 
 ## Contents
 
