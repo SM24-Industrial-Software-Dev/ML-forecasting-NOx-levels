@@ -1,4 +1,4 @@
-# Machine Learning for Modeling and Forecasting Time Series of Atmospheric Concentrations of NOx Using Satellite Data
+# Forecasting NOx Atmospheric Concentrations for Pollution and Climate Change
 
 This repository contains code that monitors and forecasts atmospheric NOx concentrations.
 
