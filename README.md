@@ -23,7 +23,7 @@ This repo contains:
 
 ## More Details
 
-See the [presentation]() for more details on the background, motivation, and technical approach for this project. 
+See the [presentation](Presentation/NOx_Forecasting_Presentation.pdf) for more details on the background, motivation, and technical approach for this project. 
 
 ## Authors
 
