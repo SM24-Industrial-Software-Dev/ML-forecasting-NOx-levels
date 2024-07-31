@@ -10,7 +10,7 @@ class NOxForecaster:
     A class for forecasting NOx concentrations.
     """
 
-    def __init__(self, incomplet_df: pd.DataFrame):
+    def __init__(self, incomplet_df: pd.DataFrame, complete_holidays: np.ndarray | None = None):
         """
         Initializes the NOxForecaster class.
 
@@ -28,6 +28,8 @@ class NOxForecaster:
         self.dates = np.array(self.df['date'].to_numpy())
         if 'isholiday' in self.df.columns:
             self.holidays = np.array(self.df['isholiday'].to_numpy())[:, None]
+        elif complete_holidays is not None:
+            self.holidays = complete_holidays[:, None]
         else:
             # Handle the case where the column does not exist
             self.holidays = None
