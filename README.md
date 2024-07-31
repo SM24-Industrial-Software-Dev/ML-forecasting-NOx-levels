@@ -11,15 +11,19 @@ We aim to provide reliable forecasts of NOx concentrations, ultimately contribut
 
 This project implements a modeling and forecasting system for the spatially-localized levels of atmospheric NOx. To achieve this, we use the Sentinel 5P satellite data available in Google Earth Engine to obtain historical time series data of NOx concentrations over regions of interest.
 
-Using this data, we employ state space forecasting models to extract trends, seasonal effects and other important covariates using the historical time series data. Our models cover both monthly-averaged data to identify long-term trends as well as daily-average data to identify short-term trends and effects.
+Using this data, we employ state-space structural time series models to extract trends, seasonal effects and other important covariates using the historical time series data. Our models analyze daily data to identify short-term trends and effects and make predictions.
 
 ## Contents
 
 This repo contains:
 
-- UI and workflow for selecting ROI, obtaining satellite data, modeling and forecasting
+- [API](Data-APIs/msa.py) for selecting Metropolitan Statistical Areas (MSAs) and obtaining their boundaries and population data
 - Data Collection, Cleaning and Analysis from Sentinel 5P satellite data in Google Earth Engine
+  - [API](Data-APIs/receive_conc_api.py) for receiving NOx concentrations for a given geographical boundary
 - Development and implementation of structural models for different time scales in which the individual components represent various facets of the time series, such as level, trend, seasonality, and individual covariate effects
+  - [API](Data-APIs/forecaster.py) for forecasting NOx concentrations using [sts-jax](https://github.com/probml/sts-jax)
+- [UI and workflow](Dash-App/Dash_Implementation.ipynb) for selecting MSAs, obtaining satellite data, modeling, and forecasting
+- [Demos](Demos/) for utilizing our various APIs
 
 ## More Details
 
