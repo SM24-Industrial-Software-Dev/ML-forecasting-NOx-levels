@@ -10,13 +10,13 @@ class NOxForecaster:
     A class for forecasting NOx concentrations.
     """
 
-    def __init__(self, incomplet_df: pd.DataFrame):
+    def __init__(self, incomplet_df: pd.DataFrame, complete_holidays: np.ndarray | None = None):
         """
         Initializes the NOxForecaster class.
 
         Args:
             incomplet_df (pd.DataFrame): The input DataFrame containing NOx concentration data.
-
+            complete_holidays (np.ndarray, optional): Numerical holiday data for all dates in incomplet_df's range
         Raises:
             AssertionError: If the input DataFrame is missing required columns.
         """
@@ -28,8 +28,10 @@ class NOxForecaster:
         self.dates = np.array(self.df['date'].to_numpy())
         if 'isholiday' in self.df.columns:
             self.holidays = np.array(self.df['isholiday'].to_numpy())[:, None]
+        elif complete_holidays is not None:
+            self.holidays = complete_holidays[:, None]
         else:
-            # Handle the case where the column does not exist
+            # Holiday data was not provided
             self.holidays = None
         self.modelcomps = [
             sts.LocalLinearTrend(),
@@ -56,7 +58,7 @@ class NOxForecaster:
         Note:
             If there is no holidays data, this method will always fit the model without covariates.
         """
-        if with_covariates and self.holidays:
+        if with_covariates and self.holidays is not None:
             return self._fit_model_with_covariates(sts.SeasonalDummy(num_seasons=7))
         return self._fit_model(sts.SeasonalDummy(num_seasons=7))
         
@@ -75,7 +77,7 @@ class NOxForecaster:
         Note:
             If there is no holidays data, this method will always fit the model without covariates.
         """
-        if with_covariates and self.holidays:
+        if with_covariates and self.holidays is not None:
             return self._fit_model_with_covariates(sts.SeasonalTrig(num_seasons=7))
         return self._fit_model(sts.SeasonalTrig(num_seasons=7))
 
@@ -91,7 +93,7 @@ class NOxForecaster:
             decomposition_data (dict): A dictionary containing the decomposition data for each component.
         """
         # Decompose the fitted model into STS components
-        component_posterior_dict = model.decompose_by_component(param_samples, self.time_series)
+        component_posterior_dict = model.decompose_by_component(param_samples, self.time_series, self.holidays if model.with_covariates else None)
 
         # Extract the decomposition data for each component
         decomposition_data = {}
@@ -123,7 +125,7 @@ class NOxForecaster:
         """
         if holidays is not None and model.with_covariates:
             num_forecast_steps = len(holidays)
-            forecast_covariates = [holidays, None]
+            forecast_covariates = holidays[:, None]
             past_covariates = self.holidays
         elif num_forecast_steps is not None:
             forecast_covariates = None
@@ -165,7 +167,7 @@ class NOxForecaster:
         model_components = self.modelcomps[:]
         model_components.insert(1, seasonal_component)
         model = sts.StructuralTimeSeries(
-            model_components=model_components,
+            model_components,
             obs_distribution="Gaussian",
             obs_time_series=self.time_series,
             covariates=self.holidays,
