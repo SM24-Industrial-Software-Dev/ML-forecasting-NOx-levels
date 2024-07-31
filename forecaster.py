@@ -16,7 +16,7 @@ class NOxForecaster:
 
         Args:
             incomplet_df (pd.DataFrame): The input DataFrame containing NOx concentration data.
-
+            complete_holidays (np.ndarray, optional): Numerical holiday data for all dates in incomplet_df's range
         Raises:
             AssertionError: If the input DataFrame is missing required columns.
         """
@@ -31,7 +31,7 @@ class NOxForecaster:
         elif complete_holidays is not None:
             self.holidays = complete_holidays[:, None]
         else:
-            # Handle the case where the column does not exist
+            # Holiday data was not provided
             self.holidays = None
         self.modelcomps = [
             sts.LocalLinearTrend(),
