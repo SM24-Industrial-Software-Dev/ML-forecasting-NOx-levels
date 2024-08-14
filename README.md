@@ -35,6 +35,6 @@ This project was developed by:
 
 - [Aaron Poulad](https://www.linkedin.com/in/aaron-poulad-603a892a4/)
 - [Ori Bach](https://www.linkedin.com/in/ori-bach-7a9b902ab/)
-- [Elchonon Stein](https://www.linkedin.com/in/elchonon-s-35b1b028b/)
+- [Elchonon Stein](https://www.linkedin.com/in/elchonon-stein/)
 
 Under the mentorship of [Ramesh Natarajan](https://www.linkedin.com/in/ramesh-natarajan-07a05989/).
