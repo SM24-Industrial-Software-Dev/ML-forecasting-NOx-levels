@@ -27,7 +27,7 @@ This repo contains:
 
 ## More Details
 
-See the [presentation](Presentation/NOx_Forecasting_Presentation.pdf) or [video](https://www.youtube.com/watch?v=pV-9N6BvINk) for more details on the background, motivation, and technical approach for this project. 
+See the [presentation](Presentation/NOx_Forecasting_Presentation.pdf) or [video](https://youtu.be/8q6dSmISfhU) for more details on the background, motivation, and technical approach for this project. 
 
 ## Authors
 
